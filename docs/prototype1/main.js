@@ -1,16 +1,15 @@
-title = "Cyclotron";
+title = "Weaver";
 
 description = `
-(Left Click) to Start
+ (Click) to go up/down
 `;
 
 characters = [
   `
-  bbbbbb
-  bbbbbb
-  bbbbbb
-  bbbbbb
-  bbbbbb
+  lllll
+  yyyyy
+  yyyyy
+  lllll
   `,
   `
    yyy
@@ -43,12 +42,19 @@ characters = [
      y
   `,
   `
-   y
+     y
     y
   yyyyy
     y
-   y
+     y
+  `,
   `
+  rrlll
+  rrlll
+  rrlll
+   rr
+  `,
+
 ];
 
 const window_size = {
@@ -63,7 +69,7 @@ options = {
   isSpeedingUpSound: true,
   isShowingScore: true,
   isReplayEnabled: true,
-  // seed: 300
+  seed: 300
 };
 
 let player;
@@ -87,7 +93,7 @@ function update() {
       pos: vec(window_size.HEIGHT*0.5, window_size.HEIGHT*0.5),
     };
     obstacle_spawn_rate = 50;
-    move_speed = 1
+    move_speed = 1;
   }
   
   // Spawn the ceiling and floor
@@ -97,19 +103,19 @@ function update() {
   // Spawn in the player
   char("e", player.pos);
 
+  // char("h", player.pos.x -10, player.pos.y);
+
   // Spawns in obstacles
   let rnd_type = ceil(rnd(0,4));
   if(obstacle_spawn_rate >= 15) obstacle_spawn_rate -= ticks/100000;
   if(timer > obstacle_spawn_rate) {
-    let rnd_pos = floor(rnd(0,4));
-    let rnd_spawn = vec(window_size.WIDTH, spawnpoints[rnd_pos]);
+    let rnd_obj = floor(rnd(0,100));
+    let rnd_spawn = vec(window_size.WIDTH, rnd(16, window_size.HEIGHT - 8));
     let in_arr = false;
-    objs.forEach((o) => {
-      if(o == rnd_spawn) in_arr = true;
-    });
-    if(!in_arr) {
-      objs.push({pos: rnd_spawn});
-      // if(rnd_type > 2) objs.push({pos: vec(window_size.WIDTH, spawnpoints[rnd_type]), type:"accelerator"}); 
+    objs.forEach((o) => { if(o == rnd_spawn) in_arr = true; });
+    if(!in_arr) { 
+      if(rnd_obj < 90) objs.push({pos: rnd_spawn, type: "obstacle"}); 
+      else if(rnd_obj >= 90) objs.push({pos: rnd_spawn, type: "deccelerate"});
     }
     timer = 0;
   }
@@ -117,12 +123,18 @@ function update() {
   // Moves the objects
   if(move_speed < 4) move_speed += ticks/1000000;
   objs.forEach((o) => {
-    o.pos.x-= move_speed;
-    // if(o.type == "accelerator") {
-    //   // console.log("yes");
-    //   char("f", o.pos);
-    // }
-    char("b", o.pos);
+    o.pos.x -= move_speed;
+    if(o.type == "obstacle") {
+      const enemy_char = char("g", o.pos).isColliding
+      if(enemy_char.char.e) { remove(objs, (obst) => { return true; }); end(); }
+    }
+    else if(o.type == "deccelerate") {
+      const decelerator = char("f",o.pos).isColliding
+      if(decelerator.char.e) { 
+        console.log(move_speed);
+        if(move_speed > 1.75) move_speed -= .5; 
+      }
+    }
   });
 
   // Removes objects once they go off screen
@@ -136,15 +148,14 @@ function update() {
   // Player movement and limitations
   player.pos = vec(input.pos.x, player.pos.y);
   player.pos.clamp(-player_offset+1, window_size.WIDTH-player_offset, 10+player_offset+5, window_size.HEIGHT-player_offset-6);
-  // particle(player.pos, 5, 5, -3.1,.1);
   
   // Gravity flip mechanic
-  if(!flip) {player.pos.y -= 2; }
-  if(flip)  {player.pos.y += 2; }
+  if(!flip) {player.pos.y -= 2; particle(player.pos.x-1, player.pos.y, 5, 5, -3.2,.1); }
+  if(flip)  {player.pos.y += 2; particle(player.pos.x-1, player.pos.y, 5, 5, -3.1,.1);}
   if (input.isJustPressed) { flip = !flip; play("jump");}
 
   // Lose conditions for Game over screen
-  if((player.pos.x < -1) || (char("e", player.pos).isColliding.char.b)) { 
+  if(player.pos.x < -1) { 
     remove(objs, (obst) => { return true; });
     end(); 
   }
